@@ -22,6 +22,9 @@ export interface BankingRepository {
   // sum of unapplied bank entries (available banked amount)
   getAvailableBanked(shipId: string, year: number): Promise<number>;
 
+  // sum of applied bank entries (total already applied)
+  getAppliedAmount(shipId: string, year: number): Promise<number>;
+
   // mark bank entries applied up to `amount` and return total applied
   applyBankedAmount(
     shipId: string,

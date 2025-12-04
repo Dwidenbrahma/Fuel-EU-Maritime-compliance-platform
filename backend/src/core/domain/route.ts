@@ -1,12 +1,15 @@
 export type Route = {
-  id: number;
-  route_id: string;
-  vesselType: string;
-  fuelType: string;
+  id: string;
+  ship_id: string;
+  route_name?: string;
+  vessel_type?: string;
+  fuel_type?: string;
+  fuel_tons: number;
+  distance_nm?: number;
   year: number;
-  ghg_intensity: number;
-  fuelConsumption: number;
-  distance: number;
-  totalEmissions: number;
-  is_baseline: boolean;
+  emissions_gco2eq?: number | null;
+  energy_mj?: number | null;
+  intensity_gco2_per_mj?: number | null;
+  baseline_intensity?: number | null;
+  created_at: Date;
 };

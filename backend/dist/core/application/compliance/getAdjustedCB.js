@@ -1,9 +1,31 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.makeGetAdjustedCB = makeGetAdjustedCB;
-function makeGetAdjustedCB(complianceRepo) {
+function makeGetAdjustedCB(complianceRepo, poolingRepo) {
     return async function getAdjustedCB(shipId, year) {
-        // 1. Get original CB
+        if (!shipId)
+            throw new Error("shipId required");
+        // 1. Check if ship is in a pool for this year
+        let adjustedCB;
+        if (poolingRepo) {
+            const poolInfo = await poolingRepo.getPoolForShip(shipId, year);
+            if (poolInfo) {
+                // Ship is in a pool → use pooled CB
+                adjustedCB = poolInfo.pooledCB;
+                return {
+                    shipId,
+                    year,
+                    originalCB: 0,
+                    bankedApplied: 0,
+                    adjustedCB,
+                    poolId: poolInfo.poolId,
+                    inPool: true,
+                    compliant: adjustedCB >= 0,
+                    deficit: adjustedCB < 0 ? -adjustedCB : 0,
+                };
+            }
+        }
+        // 2. Ship is NOT in a pool → use original CB + banked applied
         const cbRecord = await complianceRepo.getComplianceBalance(shipId, year);
         if (!cbRecord) {
             return {
@@ -12,21 +34,22 @@ function makeGetAdjustedCB(complianceRepo) {
                 originalCB: 0,
                 bankedApplied: 0,
                 adjustedCB: 0,
-                message: "No CB recorded for this ship/year.",
+                message: "No compliance balance found.",
             };
         }
         const originalCB = cbRecord.cb_gco2eq;
-        // 2. Get all applied bank entries
         const appliedEntries = await complianceRepo.getAppliedBankEntries(shipId, year);
         const bankedApplied = appliedEntries.reduce((sum, entry) => sum + entry.amount_gco2eq, 0);
-        // 3. Compute adjusted CB
-        const adjustedCB = originalCB + bankedApplied;
+        adjustedCB = originalCB + bankedApplied;
         return {
             shipId,
             year,
             originalCB,
             bankedApplied,
             adjustedCB,
+            inPool: false,
+            compliant: adjustedCB >= 0,
+            deficit: adjustedCB < 0 ? -adjustedCB : 0,
         };
     };
 }

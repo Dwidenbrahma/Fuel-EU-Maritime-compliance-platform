@@ -16,9 +16,9 @@ function registerRouters(app) {
     const routeRepo = new routeRepositoryPrisma_1.RouteRepositoryPrisma();
     const complianceRepo = new complianceRepositoryPrisma_1.ComplianceRepositoryPrisma();
     const bankingRepo = new bankingRepositoryPrisma_1.BankingRepositoryPrisma();
-    const poolRepo = new poolRepositoryPrisma_1.PoolRepositoryPrisma();
+    const poolingRepo = new poolRepositoryPrisma_1.PoolingRepositoryPrisma();
     app.use("/routes", (0, routeController_1.default)(routeRepo));
     app.use("/compliance", (0, complianceController_1.default)(complianceRepo));
-    app.use("/banking", (0, bankingController_1.default)(bankingRepo));
-    app.use("/pools", (0, poolingController_1.default)(poolRepo));
+    app.use("/banking", (0, bankingController_1.default)(bankingRepo, complianceRepo));
+    app.use("/pooling", (0, poolingController_1.default)(poolingRepo, complianceRepo));
 }

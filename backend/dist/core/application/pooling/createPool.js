@@ -1,44 +1,56 @@
 "use strict";
+// src/core/application/pooling/createPool.ts
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.makeCreatePool = makeCreatePool;
-function makeCreatePool(poolRepo) {
-    return async function createPool(year, members) {
-        // validate sum >= 0
-        const sum = members.reduce((s, m) => s + m.cb_before, 0);
-        if (sum < 0)
-            throw new Error("Sum of CB must be >= 0");
-        // greedy allocate: sort desc
-        const sorted = [...members].sort((a, b) => b.cb_before - a.cb_before);
-        // naive greedy: transfer surplus -> deficits until done
-        // produce cb_after values (simple algorithm)
-        let surplusPool = sorted
-            .filter((m) => m.cb_before > 0)
-            .map((m) => ({ ...m, remaining: m.cb_before }));
-        const deficits = sorted
-            .filter((m) => m.cb_before < 0)
-            .map((m) => ({ ...m, need: -m.cb_before }));
-        const afterMap = {};
-        for (const d of deficits) {
-            let need = d.need;
-            for (const s of surplusPool) {
-                if (need <= 0)
-                    break;
-                const give = Math.min(s.remaining, need);
-                s.remaining -= give;
-                need -= give;
-            }
-            afterMap[d.shipId] = -need; // final after (may be negative)
+const getAdjustedCB_1 = require("../compliance/getAdjustedCB");
+function makeCreatePool(complianceRepo, poolingRepo) {
+    return async function createPool(shipIds, year) {
+        // 1. Validate inputs
+        if (!shipIds || shipIds.length === 0) {
+            throw new Error("shipIds array is required");
         }
-        // finalize surplus after
-        for (const s of surplusPool)
-            afterMap[s.shipId] = s.remaining;
-        const membersWithAfter = members.map((m) => ({
-            shipId: m.shipId,
-            cb_before: m.cb_before,
-            cb_after: afterMap[m.shipId] ?? m.cb_before,
-        }));
-        // persist via repo
-        const pool = await poolRepo.createPool(year, membersWithAfter);
-        return pool;
+        if (shipIds.length < 2) {
+            throw new Error("At least 2 ships required to create a pool");
+        }
+        if (!year || year <= 0) {
+            throw new Error("Year is required and must be positive");
+        }
+        const getAdjustedCB = (0, getAdjustedCB_1.makeGetAdjustedCB)(complianceRepo, poolingRepo);
+        // 2. Fetch adjusted CB for all ships
+        const ships = [];
+        for (const shipId of shipIds) {
+            const cb = await getAdjustedCB(shipId, year);
+            if (!cb || cb.adjustedCB === null || cb.adjustedCB === undefined) {
+                throw new Error(`Ship ${shipId} has no adjusted CB for year ${year}`);
+            }
+            if (cb.adjustedCB <= 0) {
+                throw new Error(`Ship ${shipId} has adjustedCB <= 0 (value: ${cb.adjustedCB}). Only positive CB ships can join pools.`);
+            }
+            ships.push({
+                shipId,
+                adjustedCB: cb.adjustedCB,
+            });
+        }
+        // 3. Validate no ship is already in a pool for this year
+        for (const ship of ships) {
+            const inPool = await poolingRepo.isShipInPool(ship.shipId, year);
+            if (inPool) {
+                throw new Error(`Ship ${ship.shipId} is already in a pool for year ${year}`);
+            }
+        }
+        // 4. Calculate pooled CB (sum of adjusted CBs)
+        const pooledCB = ships.reduce((sum, s) => sum + s.adjustedCB, 0);
+        // 5. Create pool
+        const poolResult = await poolingRepo.createPool(year, pooledCB);
+        // 6. Add ships to pool
+        for (const ship of ships) {
+            await poolingRepo.addShipToPool(poolResult.id, ship.shipId, ship.adjustedCB);
+        }
+        return {
+            poolId: poolResult.id,
+            year,
+            pooledCB,
+            ships,
+        };
     };
 }

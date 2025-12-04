@@ -17,22 +17,22 @@ export default function makeBankingRouter(
   // GET banking records / summary
   router.get("/records", async (req, res) => {
     try {
-      const { routeId, year } = req.query;
-      if (!routeId || !year)
-        return res.status(400).json({ error: "routeId & year required" });
+      const { shipId, year } = req.query;
+      if (!shipId || !year)
+        return res.status(400).json({ error: "shipId & year required" });
 
-      const shipId = String(routeId);
+      const sid = String(shipId);
       const y = Number(year);
 
       // cb_before
-      const cb = await complianceRepo.getComplianceBalance(shipId, y);
+      const cb = await complianceRepo.getComplianceBalance(sid, y);
       const cb_before = cb ? cb.cb_gco2eq : 0;
 
       // available banked amount
-      const available = await bankingRepo.getAvailableBanked(shipId, y);
+      const available = await bankingRepo.getAvailableBanked(sid, y);
 
       // list all bank entries
-      const entries = await bankingRepo.listBankEntries(shipId, y);
+      const entries = await bankingRepo.listBankEntries(sid, y);
 
       res.json({
         cb_before,
@@ -48,11 +48,11 @@ export default function makeBankingRouter(
   // POST bank => bank the positive CB
   router.post("/bank", async (req, res) => {
     try {
-      const { routeId, year } = req.body;
-      if (!routeId || !year)
-        return res.status(400).json({ error: "routeId & year required" });
+      const { shipId, year } = req.body;
+      if (!shipId || !year)
+        return res.status(400).json({ error: "shipId & year required" });
 
-      const result = await bankSurplus(String(routeId), Number(year));
+      const result = await bankSurplus(String(shipId), Number(year));
       res.json(result);
     } catch (err: any) {
       console.error("POST /banking/bank error:", err);
@@ -61,17 +61,17 @@ export default function makeBankingRouter(
   });
 
   // POST apply => apply banked amount to a deficit
-  // body: { routeId, year, amount }
+  // body: { shipId, year, amount }
   router.post("/apply", async (req, res) => {
     try {
-      const { routeId, year, amount } = req.body;
-      if (!routeId || !year || !amount)
+      const { shipId, year, amount } = req.body;
+      if (!shipId || !year || !amount)
         return res
           .status(400)
-          .json({ error: "routeId, year and amount required" });
+          .json({ error: "shipId, year and amount required" });
 
       const result = await applyBank(
-        String(routeId),
+        String(shipId),
         Number(year),
         Number(amount)
       );

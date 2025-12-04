@@ -1,4 +1,4 @@
-import { prisma } from "./prismaClient";
+import { prisma } from "../../../infrastructure/prisma/prismaClient";
 import type { ShipCompliance } from "../../../core/domain/compliance";
 import { ComplianceRepository } from "../../../core/ports/complianceRepository";
 

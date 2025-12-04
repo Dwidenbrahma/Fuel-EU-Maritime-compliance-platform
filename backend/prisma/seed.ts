@@ -1,85 +1,177 @@
 import { PrismaClient } from "@prisma/client";
-
 const prisma = new PrismaClient();
 
 async function main() {
   console.log("🌱 Seeding database...");
 
-  // Clear existing routes (optional, safe for dev)
+  // Clean tables
+  await prisma.poolMember.deleteMany();
+  await prisma.pool.deleteMany();
+  await prisma.bankEntry.deleteMany();
+  await prisma.shipCompliance.deleteMany();
   await prisma.route.deleteMany();
 
+  // -------------------------
+  // 🌱 ROUTE DATA (dummy realistic)
+  // -------------------------
   await prisma.route.createMany({
     data: [
       {
-        route_id: "R001",
-        vesselType: "Container",
-        fuelType: "HFO",
+        ship_id: "SHIP001",
+        route_name: "Atlantic EU Run",
+        vessel_type: "Container",
+        fuel_type: "HFO",
+        fuel_tons: 125.5,
+        distance_nm: 12000,
         year: 2024,
-        ghg_intensity: 91.0,
-        fuelConsumption: 5000,
-        distance: 12000,
-        totalEmissions: 4500,
-        is_baseline: true,
+        emissions_gco2eq: 4500,
+        energy_mj: 50000,
+        intensity_gco2_per_mj: 0.09,
+        baseline_intensity: 0.1,
       },
       {
-        route_id: "R002",
-        vesselType: "BulkCarrier",
-        fuelType: "LNG",
+        ship_id: "SHIP002",
+        route_name: "Asia-Pacific Lane",
+        vessel_type: "BulkCarrier",
+        fuel_type: "LNG",
+        fuel_tons: 120,
+        distance_nm: 11500,
         year: 2024,
-        ghg_intensity: 88.0,
-        fuelConsumption: 4800,
-        distance: 11500,
-        totalEmissions: 4200,
+        emissions_gco2eq: 4200,
+        energy_mj: 48000,
+        intensity_gco2_per_mj: 0.087,
+        baseline_intensity: 0.095,
       },
       {
-        route_id: "R003",
-        vesselType: "Tanker",
-        fuelType: "MGO",
+        ship_id: "SHIP003",
+        route_name: "Gulf Oil Route",
+        vessel_type: "Tanker",
+        fuel_type: "MGO",
+        fuel_tons: 127.5,
+        distance_nm: 12500,
         year: 2024,
-        ghg_intensity: 93.5,
-        fuelConsumption: 5100,
-        distance: 12500,
-        totalEmissions: 4700,
+        emissions_gco2eq: 4700,
+        energy_mj: 52000,
+        intensity_gco2_per_mj: 0.091,
+        baseline_intensity: 0.1,
       },
       {
-        route_id: "R004",
-        vesselType: "RoRo",
-        fuelType: "HFO",
+        ship_id: "SHIP004",
+        route_name: "Northern EU Run",
+        vessel_type: "RoRo",
+        fuel_type: "HFO",
+        fuel_tons: 122.5,
+        distance_nm: 11800,
         year: 2025,
-        ghg_intensity: 89.2,
-        fuelConsumption: 4900,
-        distance: 11800,
-        totalEmissions: 4300,
+        emissions_gco2eq: 4300,
+        energy_mj: 49500,
+        intensity_gco2_per_mj: 0.086,
+        baseline_intensity: 0.095,
       },
       {
-        route_id: "R005",
-        vesselType: "Container",
-        fuelType: "LNG",
+        ship_id: "SHIP005",
+        route_name: "Middle East Trade Route",
+        vessel_type: "Container",
+        fuel_type: "LNG",
+        fuel_tons: 123.75,
+        distance_nm: 11900,
         year: 2025,
-        ghg_intensity: 90.5,
-        fuelConsumption: 4950,
-        distance: 11900,
-        totalEmissions: 4400,
+        emissions_gco2eq: 4400,
+        energy_mj: 51000,
+        intensity_gco2_per_mj: 0.088,
+        baseline_intensity: 0.094,
       },
     ],
   });
 
-  console.log("🌱 Seed completed successfully!");
+  console.log("🌱 Routes added.");
+
+  // -------------------------
+  // 🌱 SHIP COMPLIANCE DATA
+  // -------------------------
+  await prisma.shipCompliance.createMany({
+    data: [
+      { ship_id: "SHIP001", year: 2024, cb_gco2eq: 100 },
+      { ship_id: "SHIP002", year: 2024, cb_gco2eq: 95 },
+      { ship_id: "SHIP003", year: 2024, cb_gco2eq: 110 },
+      { ship_id: "SHIP004", year: 2025, cb_gco2eq: 102 },
+      { ship_id: "SHIP005", year: 2025, cb_gco2eq: 98 },
+    ],
+  });
+
+  console.log("🌱 Compliance added.");
+
+  // -------------------------
+  -(
+    // 🌱 BANK ENTRIES
+    // -------------------------
+    (await prisma.bankEntry.createMany({
+      data: [
+        { ship_id: "SHIP001", year: 2024, amount_gco2eq: 50, applied: false },
+        { ship_id: "SHIP001", year: 2024, amount_gco2eq: 25, applied: false },
+
+        { ship_id: "SHIP002", year: 2024, amount_gco2eq: 40, applied: false },
+        { ship_id: "SHIP003", year: 2024, amount_gco2eq: 60, applied: false },
+
+        { ship_id: "SHIP004", year: 2025, amount_gco2eq: 55, applied: false },
+        { ship_id: "SHIP005", year: 2025, amount_gco2eq: 35, applied: false },
+      ],
+    }))
+  );
+
+  console.log("🌱 Banking entries added.");
+
+  // -------------------------
+  // 🌱 POOL DATA
+  // -------------------------
+  const pool2024 = await prisma.pool.create({
+    data: {
+      year: 2024,
+      pooled_cb: 150, // dummy combined CB
+    },
+  });
+
+  const pool2025 = await prisma.pool.create({
+    data: {
+      year: 2025,
+      pooled_cb: 160,
+    },
+  });
+
+  // -------------------------
+  // 🌱 POOL MEMBERS
+  // -------------------------
+  await prisma.poolMember.createMany({
+    data: [
+      // 2024 Pool
+      {
+        pool_id: pool2024.id,
+        ship_id: "SHIP001",
+        adjusted_cb: 80,
+      },
+      {
+        pool_id: pool2024.id,
+        ship_id: "SHIP002",
+        adjusted_cb: 70,
+      },
+
+      // 2025 Pool
+      {
+        pool_id: pool2025.id,
+        ship_id: "SHIP004",
+        adjusted_cb: 85,
+      },
+      {
+        pool_id: pool2025.id,
+        ship_id: "SHIP005",
+        adjusted_cb: 75,
+      },
+    ],
+  });
+
+  console.log("🌱 Pools + Members added.");
 }
 
 main()
-  .catch((e) => {
-    console.error("❌ Seeding error:", e);
-    // Don't call process.exit() here because it will terminate the process
-    // immediately and may prevent the `finally` block from running.
-    // Instead, set the exit code and allow the process to exit naturally
-    // after cleanup in the `finally` block.
-    //process.exitCode = 1;
-  })
-  .finally(async () => {
-    try {
-      await prisma.$disconnect();
-    } catch (disconnectErr) {
-      console.error("Error during prisma.$disconnect():", disconnectErr);
-    }
-  });
+  .catch((e) => console.error("❌ Seed Error: ", e))
+  .finally(async () => await prisma.$disconnect());

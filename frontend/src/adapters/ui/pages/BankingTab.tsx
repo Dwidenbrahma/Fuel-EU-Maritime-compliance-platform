@@ -1,22 +1,17 @@
 // src/adapters/ui/pages/BankingTab.tsx
 import { useEffect, useState } from "react";
-
-type BankEntry = {
-  id?: number;
-  ship_id: string;
-  year: number;
-  amount_gco2eq: number;
-  applied: boolean;
-  created_at?: string;
-};
+import { useBanking } from "../../../main/compositionRoot";
+import type { BankingEntry } from "../../../core/domain/bankingEntry";
 
 export default function BankingTab() {
-  const [routeId, setRouteId] = useState("R001");
+  const { getBankingRecords, bankSurplus, applyBank } = useBanking();
+
+  const [shipId, setShipId] = useState("SHIP001");
   const [year, setYear] = useState<number>(2024);
   const [loading, setLoading] = useState(false);
   const [cbBefore, setCbBefore] = useState<number | null>(null);
   const [available, setAvailable] = useState<number>(0);
-  const [entries, setEntries] = useState<BankEntry[]>([]);
+  const [entries, setEntries] = useState<BankingEntry[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [applyAmount, setApplyAmount] = useState<number>(0);
   const [actionLoading, setActionLoading] = useState(false);
@@ -30,16 +25,14 @@ export default function BankingTab() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(
-        `/banking/records?routeId=${routeId}&year=${year}`
-      );
-      if (!res.ok) throw new Error(await res.text());
-      const json = await res.json();
-      setCbBefore(json.cb_before ?? 0);
-      setAvailable(json.available ?? 0);
-      setEntries(json.entries ?? []);
-    } catch (err: any) {
-      setError(err.message || "Failed to load banking records");
+      const records = await getBankingRecords(shipId, year);
+      setCbBefore(records.cbBefore);
+      setAvailable(records.available);
+      setEntries(records.entries);
+    } catch (err: unknown) {
+      const error =
+        err instanceof Error ? err.message : "Failed to load banking records";
+      setError(error);
     } finally {
       setLoading(false);
     }
@@ -49,18 +42,12 @@ export default function BankingTab() {
     setActionLoading(true);
     setError(null);
     try {
-      const res = await fetch("/banking/bank", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ routeId, year }),
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "Banking failed");
-      // update UI
+      await bankSurplus(shipId, year, cbBefore ?? 0);
       await fetchRecords();
       alert("Banked surplus successfully");
-    } catch (err: any) {
-      setError(err.message || "Banking failed");
+    } catch (err: unknown) {
+      const error = err instanceof Error ? err.message : "Banking failed";
+      setError(error);
     } finally {
       setActionLoading(false);
     }
@@ -70,17 +57,13 @@ export default function BankingTab() {
     setActionLoading(true);
     setError(null);
     try {
-      const res = await fetch("/banking/apply", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ routeId, year, amount: applyAmount }),
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "Apply failed");
+      await applyBank(shipId, year, applyAmount);
       await fetchRecords();
-      alert(`Applied ${json.applied} (gCO2e). CB after: ${json.cb_after}`);
-    } catch (err: any) {
-      setError(err.message || "Apply failed");
+      alert(`Applied ${applyAmount} gCO2e successfully`);
+      setApplyAmount(0);
+    } catch (err: unknown) {
+      const error = err instanceof Error ? err.message : "Apply failed";
+      setError(error);
     } finally {
       setActionLoading(false);
     }
@@ -99,8 +82,9 @@ export default function BankingTab() {
         <div className="flex gap-4 items-center">
           <input
             className="p-2 border rounded"
-            value={routeId}
-            onChange={(e) => setRouteId(e.target.value)}
+            placeholder="Ship ID"
+            value={shipId}
+            onChange={(e) => setShipId(e.target.value)}
           />
           <input
             type="number"
@@ -193,12 +177,10 @@ export default function BankingTab() {
               {entries.map((e) => (
                 <tr key={e.id} className="border-b">
                   <td className="py-3">{e.id}</td>
-                  <td className="py-3">{e.amount_gco2eq.toLocaleString()}</td>
+                  <td className="py-3">{e.amountGco2eq.toLocaleString()}</td>
                   <td className="py-3">{e.applied ? "Yes" : "No"}</td>
                   <td className="py-3">
-                    {e.created_at
-                      ? new Date(e.created_at).toLocaleString()
-                      : "-"}
+                    {e.createdAt ? new Date(e.createdAt).toLocaleString() : "-"}
                   </td>
                 </tr>
               ))}

@@ -8,16 +8,21 @@ generator client {
 }
 
 model Route {
-  id              Int     @id @default(autoincrement())
-  route_id        String  @unique
-  vesselType      String
-  fuelType        String
-  year            Int
-  ghg_intensity   Float
-  fuelConsumption Float
-  distance        Float
-  totalEmissions  Float
-  is_baseline     Boolean @default(false)
+  id                     String   @id @default(uuid())
+  ship_id                String?
+  route_name             String?
+  vessel_type            String?
+  fuel_type              String?
+  fuel_tons              Float?
+  distance_nm            Float?
+  year                   Int
+
+  emissions_gco2eq       Float?    // computed from fuel
+  energy_mj              Float?    // computed from fuel
+  intensity_gco2_per_mj  Float?    // emissions / energy
+  baseline_intensity     Float?    // nullable baseline reference
+
+  created_at             DateTime @default(now())
 }
 
 model ShipCompliance {
@@ -38,17 +43,19 @@ model BankEntry {
 
 
 model Pool {
-  id         Int      @id @default(autoincrement())
-  year       Int
+  id        String   @id @default(uuid())
+  year      Int
+  pooled_cb Float
   created_at DateTime @default(now())
-  members    PoolMember[]
+  members   PoolMember[]
 }
 
 model PoolMember {
-  id        Int     @id @default(autoincrement())
-  pool_id   Int
-  ship_id   String
-  cb_before Float
-  cb_after  Float?
-  pool      Pool    @relation(fields: [pool_id], references: [id])
+  id          String   @id @default(uuid())
+  pool_id     String
+  ship_id     String
+  adjusted_cb Float
+  Pool        Pool     @relation(fields: [pool_id], references: [id])
+
+  @@index([ship_id])
 }

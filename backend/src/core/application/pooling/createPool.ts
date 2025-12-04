@@ -2,63 +2,92 @@
 
 import { ComplianceRepository } from "../../ports/complianceRepository";
 import { PoolingRepository } from "../../ports/poolingRepository";
+import { makeGetAdjustedCB } from "../compliance/getAdjustedCB";
+
+export interface PoolShip {
+  shipId: string;
+  adjustedCB: number;
+}
+
+export interface CreatePoolResult {
+  poolId: string;
+  year: number;
+  pooledCB: number;
+  ships: PoolShip[];
+}
 
 export function makeCreatePool(
   complianceRepo: ComplianceRepository,
   poolingRepo: PoolingRepository
 ) {
-  return async function createPool(shipIds: string[], year: number) {
-    // 1. Fetch adjusted CB for all ships
-    const members = [];
-    for (const shipId of shipIds) {
-      const cb = await complianceRepo.getAdjustedCB(shipId, year);
-      if (!cb) throw new Error(`Missing adjusted CB for ship ${shipId}`);
+  return async function createPool(
+    shipIds: string[],
+    year: number
+  ): Promise<CreatePoolResult> {
+    // 1. Validate inputs
+    if (!shipIds || shipIds.length === 0) {
+      throw new Error("shipIds array is required");
+    }
+    if (shipIds.length < 2) {
+      throw new Error("At least 2 ships required to create a pool");
+    }
+    if (!year || year <= 0) {
+      throw new Error("Year is required and must be positive");
+    }
 
-      members.push({
-        ship_id: shipId,
-        cb_before: cb.adjustedCB,
-        cb_after: cb.adjustedCB, // will be modified
+    const getAdjustedCB = makeGetAdjustedCB(complianceRepo, poolingRepo);
+
+    // 2. Fetch adjusted CB for all ships
+    const ships: PoolShip[] = [];
+    for (const shipId of shipIds) {
+      const cb = await getAdjustedCB(shipId, year);
+
+      if (!cb || cb.adjustedCB === null || cb.adjustedCB === undefined) {
+        throw new Error(`Ship ${shipId} has no adjusted CB for year ${year}`);
+      }
+
+      if (cb.adjustedCB <= 0) {
+        throw new Error(
+          `Ship ${shipId} has adjustedCB <= 0 (value: ${cb.adjustedCB}). Only positive CB ships can join pools.`
+        );
+      }
+
+      ships.push({
+        shipId,
+        adjustedCB: cb.adjustedCB,
       });
     }
 
-    // 2. Validate rule: sum(adjustedCB) >= 0
-    const sum = members.reduce((s, m) => s + m.cb_before, 0);
-    if (sum < 0) throw new Error("Pool invalid: total CB must be >= 0");
-
-    // 3. Apply greedy allocation
-    const surplus = members.filter((m) => m.cb_before > 0);
-    const deficit = members.filter((m) => m.cb_before < 0);
-
-    surplus.sort((a, b) => b.cb_before - a.cb_before);
-    deficit.sort((a, b) => a.cb_before - b.cb_before);
-
-    for (const d of deficit) {
-      let needed = -d.cb_after;
-      for (const s of surplus) {
-        if (s.cb_after <= 0) continue;
-        if (needed <= 0) break;
-
-        const give = Math.min(s.cb_after, needed);
-        s.cb_after -= give;
-        d.cb_after += give;
-        needed -= give;
+    // 3. Validate no ship is already in a pool for this year
+    for (const ship of ships) {
+      const inPool = await poolingRepo.isShipInPool(ship.shipId, year);
+      if (inPool) {
+        throw new Error(
+          `Ship ${ship.shipId} is already in a pool for year ${year}`
+        );
       }
     }
 
-    // 4. Final validation rules
-    if (members.some((m) => m.cb_after < 0))
-      throw new Error("Surplus ship ended negative → invalid pool");
-    if (members.some((m) => m.cb_after < m.cb_before))
-      throw new Error("Deficit ship exits worse → invalid pool");
+    // 4. Calculate pooled CB (sum of adjusted CBs)
+    const pooledCB = ships.reduce((sum, s) => sum + s.adjustedCB, 0);
 
-    // 5. Store pool + members
-    const poolId = await poolingRepo.createPool(year);
-    await poolingRepo.addPoolMembers(poolId, members);
+    // 5. Create pool
+    const poolResult = await poolingRepo.createPool(year, pooledCB);
+
+    // 6. Add ships to pool
+    for (const ship of ships) {
+      await poolingRepo.addShipToPool(
+        poolResult.id,
+        ship.shipId,
+        ship.adjustedCB
+      );
+    }
 
     return {
-      poolId,
-      members,
-      totalCB: sum,
+      poolId: poolResult.id,
+      year,
+      pooledCB,
+      ships,
     };
   };
 }

@@ -1,8 +1,36 @@
 import { ComplianceRepository } from "../../ports/complianceRepository";
+import { PoolingRepository } from "../../ports/poolingRepository";
 
-export function makeGetAdjustedCB(complianceRepo: ComplianceRepository) {
+export function makeGetAdjustedCB(
+  complianceRepo: ComplianceRepository,
+  poolingRepo?: PoolingRepository
+) {
   return async function getAdjustedCB(shipId: string, year: number) {
-    // 1. Get original CB
+    if (!shipId) throw new Error("shipId required");
+
+    // 1. Check if ship is in a pool for this year
+    let adjustedCB: number;
+
+    if (poolingRepo) {
+      const poolInfo = await poolingRepo.getPoolForShip(shipId, year);
+      if (poolInfo) {
+        // Ship is in a pool → use pooled CB
+        adjustedCB = poolInfo.pooledCB;
+        return {
+          shipId,
+          year,
+          originalCB: 0,
+          bankedApplied: 0,
+          adjustedCB,
+          poolId: poolInfo.poolId,
+          inPool: true,
+          compliant: adjustedCB >= 0,
+          deficit: adjustedCB < 0 ? -adjustedCB : 0,
+        };
+      }
+    }
+
+    // 2. Ship is NOT in a pool → use original CB + banked applied
     const cbRecord = await complianceRepo.getComplianceBalance(shipId, year);
 
     if (!cbRecord) {
@@ -12,13 +40,12 @@ export function makeGetAdjustedCB(complianceRepo: ComplianceRepository) {
         originalCB: 0,
         bankedApplied: 0,
         adjustedCB: 0,
-        message: "No CB recorded for this ship/year.",
+        message: "No compliance balance found.",
       };
     }
 
     const originalCB = cbRecord.cb_gco2eq;
 
-    // 2. Get all applied bank entries
     const appliedEntries = await complianceRepo.getAppliedBankEntries(
       shipId,
       year
@@ -29,8 +56,7 @@ export function makeGetAdjustedCB(complianceRepo: ComplianceRepository) {
       0
     );
 
-    // 3. Compute adjusted CB
-    const adjustedCB = originalCB + bankedApplied;
+    adjustedCB = originalCB + bankedApplied;
 
     return {
       shipId,
@@ -38,6 +64,9 @@ export function makeGetAdjustedCB(complianceRepo: ComplianceRepository) {
       originalCB,
       bankedApplied,
       adjustedCB,
+      inPool: false,
+      compliant: adjustedCB >= 0,
+      deficit: adjustedCB < 0 ? -adjustedCB : 0,
     };
   };
 }

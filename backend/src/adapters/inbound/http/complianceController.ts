@@ -23,7 +23,12 @@ export default function makeComplianceRouter(
     // call repository for adjusted CBs
     const year = Number(req.query.year || 2025);
     const rows = await complianceRepo.listAdjustedCB(year);
-    res.json(rows);
+    // map repository shape (snake_case) to API contract expected by frontend
+    const mapped = rows.map((r) => ({
+      shipId: r.ship_id,
+      adjustedCB: r.cb_before,
+    }));
+    res.json(mapped);
   });
 
   return router;

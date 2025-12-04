@@ -13,6 +13,11 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
       },
+      "/compliance": {
+        target: "http://localhost:4000",
+        changeOrigin: true,
+        secure: false,
+      },
       "/banking": {
         target: "http://localhost:4000",
         changeOrigin: true,
@@ -24,6 +29,11 @@ export default defineConfig({
         secure: false,
       },
       "/health": {
+        target: "http://localhost:4000",
+        changeOrigin: true,
+        secure: false,
+      },
+      "/pools": {
         target: "http://localhost:4000",
         changeOrigin: true,
         secure: false,

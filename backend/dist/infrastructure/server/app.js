@@ -10,12 +10,13 @@ const cors_1 = __importDefault(require("cors"));
 const complianceRepositoryPrisma_1 = require("../../adapters/outbound/postgres/complianceRepositoryPrisma");
 const routeRepositoryPrisma_1 = require("../../adapters/outbound/postgres/routeRepositoryPrisma");
 const bankingRepositoryPrisma_1 = require("../../adapters/outbound/postgres/bankingRepositoryPrisma");
-const poolRepositoryPrisma_1 = require("../../adapters/outbound/postgres/poolRepositoryPrisma");
+const poolingRepositoryPrisma_1 = require("../../adapters/outbound/postgres/poolingRepositoryPrisma");
 // HTTP routers (Inbound adapters)
-const routeController_1 = __importDefault(require("../../adapters/inbound/http/routeController"));
+const routesRouter_1 = __importDefault(require("../../adapters/inbound/http/routesRouter"));
 const complianceController_1 = __importDefault(require("../../adapters/inbound/http/complianceController"));
 const bankingController_1 = __importDefault(require("../../adapters/inbound/http/bankingController"));
 const poolingController_1 = __importDefault(require("../../adapters/inbound/http/poolingController"));
+const routesCompareRouter_1 = require("../../adapters/inbound/http/routesCompareRouter");
 // createApp only composes the application: middleware, repository instantiation,
 // and wiring repositories into HTTP adapters (controllers). No use-case logic
 // or Prisma queries are executed here.
@@ -28,13 +29,14 @@ function createApp() {
     const routeRepo = new routeRepositoryPrisma_1.RouteRepositoryPrisma();
     const complianceRepo = new complianceRepositoryPrisma_1.ComplianceRepositoryPrisma();
     const bankingRepo = new bankingRepositoryPrisma_1.BankingRepositoryPrisma();
-    const poolRepo = new poolRepositoryPrisma_1.PoolRepositoryPrisma();
+    const poolRepo = new poolingRepositoryPrisma_1.PoolingRepositoryPrisma();
     // Wire inbound HTTP adapters by injecting repository ports.
     // Controllers will create their own use-case instances from the ports.
-    app.use("/routes", (0, routeController_1.default)(routeRepo));
+    app.use("/routes", (0, routesRouter_1.default)(routeRepo));
     app.use("/compliance", (0, complianceController_1.default)(complianceRepo));
-    app.use("/banking", (0, bankingController_1.default)(bankingRepo));
-    app.use("/pools", (0, poolingController_1.default)(poolRepo));
+    app.use("/banking", (0, bankingController_1.default)(bankingRepo, complianceRepo));
+    app.use("/pools", (0, poolingController_1.default)(poolRepo, complianceRepo));
+    app.use("/compare", (0, routesCompareRouter_1.createCompareRouter)());
     // Health check
     app.get("/", (_req, res) => res.send("FuelEU Backend Running ✔"));
     return app;

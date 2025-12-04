@@ -8,7 +8,7 @@ import { BankingRepositoryPrisma } from "../../adapters/outbound/postgres/bankin
 import { PoolingRepositoryPrisma } from "../../adapters/outbound/postgres/poolingRepositoryPrisma";
 
 // HTTP routers (Inbound adapters)
-import makeRoutesRouter from "../../adapters/inbound/http/routeController";
+import makeRoutesRouter from "../../adapters/inbound/http/routesRouter";
 import makeComplianceRouter from "../../adapters/inbound/http/complianceController";
 import makeBankingRouter from "../../adapters/inbound/http/bankingController";
 import makePoolingRouter from "../../adapters/inbound/http/poolingController";
@@ -35,7 +35,7 @@ export function createApp() {
   app.use("/routes", makeRoutesRouter(routeRepo));
   app.use("/compliance", makeComplianceRouter(complianceRepo));
   app.use("/banking", makeBankingRouter(bankingRepo, complianceRepo));
-  app.use("/pools", makePoolingRouter());
+  app.use("/pools", makePoolingRouter(poolRepo, complianceRepo));
   app.use("/compare", createCompareRouter());
 
   // Health check

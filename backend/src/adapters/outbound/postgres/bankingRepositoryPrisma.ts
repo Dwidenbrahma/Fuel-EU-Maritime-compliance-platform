@@ -4,7 +4,7 @@ import {
   BankingRepository,
   BankEntryRecord,
 } from "../../../core/ports/bankingRepository";
-import { prisma } from "./prismaClient";
+import { prisma } from "../../../infrastructure/prisma/prismaClient";
 
 export class BankingRepositoryPrisma implements BankingRepository {
   async createBankEntry(entry: BankEntryRecord): Promise<BankEntryRecord> {
@@ -18,7 +18,7 @@ export class BankingRepositoryPrisma implements BankingRepository {
     });
 
     return {
-      id: created.id,
+      id: created.id, // string UUID
       ship_id: created.ship_id,
       year: created.year,
       amount_gco2eq: created.amount_gco2eq,
@@ -59,8 +59,17 @@ export class BankingRepositoryPrisma implements BankingRepository {
     return rows.reduce((sum, row) => sum + row.amount_gco2eq, 0);
   }
 
+  async getAppliedAmount(shipId: string, year: number): Promise<number> {
+    const rows = await prisma.bankEntry.findMany({
+      where: { ship_id: shipId, year, applied: true },
+      select: { amount_gco2eq: true },
+    });
+
+    return rows.reduce((sum, row) => sum + row.amount_gco2eq, 0);
+  }
+
   /**
-   * Mark bank entries as applied up to `amount`.
+   * Mark bank entries as applied until reaching `amount`.
    * Returns the total applied.
    */
   async applyBankedAmount(
@@ -70,6 +79,7 @@ export class BankingRepositoryPrisma implements BankingRepository {
   ): Promise<number> {
     if (amount <= 0) return 0;
 
+    // Get unapplied bank entries (FIFO)
     const unapplied = await prisma.bankEntry.findMany({
       where: { ship_id: shipId, year, applied: false },
       orderBy: { created_at: "asc" },
@@ -83,7 +93,7 @@ export class BankingRepositoryPrisma implements BankingRepository {
 
       const take = Math.min(remaining, entry.amount_gco2eq);
 
-      // Case 1: fully consume entry
+      // Case 1: Fully consume the entry
       if (take === entry.amount_gco2eq) {
         await prisma.bankEntry.update({
           where: { id: entry.id },
@@ -92,13 +102,13 @@ export class BankingRepositoryPrisma implements BankingRepository {
 
         appliedTotal += take;
         remaining -= take;
-      }
-
-      // Case 2: partially consume → split the entry
-      else {
+      } else {
+        // Case 2: Partially consume entry → split into applied + remaining
         await prisma.bankEntry.update({
           where: { id: entry.id },
-          data: { amount_gco2eq: entry.amount_gco2eq - take },
+          data: {
+            amount_gco2eq: entry.amount_gco2eq - take,
+          },
         });
 
         await prisma.bankEntry.create({

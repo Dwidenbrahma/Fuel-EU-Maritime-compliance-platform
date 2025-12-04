@@ -1,19 +1,11 @@
 import { useState, useEffect } from "react";
-
-interface Route {
-  id: string;
-  vesselType: string;
-  fuelType: string;
-  year: number;
-  ghgIntensity: number;
-  fuelConsumption: number;
-  distance: number;
-  totalEmissions: number;
-  isBaseline: boolean;
-}
+import { useRoutes } from "../../../main/compositionRoot";
+import type { RouteMetrics } from "../../../core/ports/routesPort";
 
 export default function RoutesTab() {
-  const [routes, setRoutes] = useState<Route[]>([]);
+  const { listRoutes, setBaseline } = useRoutes();
+
+  const [routes, setRoutes] = useState<RouteMetrics[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [settingBaseline, setSettingBaseline] = useState<string | null>(null);
@@ -26,31 +18,14 @@ export default function RoutesTab() {
   // Fetch routes on mount
   useEffect(() => {
     fetchRoutes();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchRoutes = async () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await fetch("/routes");
-      if (!response.ok) {
-        throw new Error(`Failed to fetch routes: ${response.statusText}`);
-      }
-      const raw = await response.json();
-      // Backend returns snake_case keys (ghg_intensity, is_baseline, route_id)
-      // Normalize to frontend camelCase shape expected by this component.
-      const items = Array.isArray(raw) ? raw : raw.routes ?? [];
-      const data: Route[] = items.map((r: any) => ({
-        id: (r.route_id ?? r.id ?? "").toString(),
-        vesselType: r.vesselType ?? r.vessel_type ?? "",
-        fuelType: r.fuelType ?? r.fuel_type ?? "",
-        year: Number(r.year ?? 0),
-        ghgIntensity: Number(r.ghg_intensity ?? r.ghgIntensity ?? 0),
-        fuelConsumption: Number(r.fuelConsumption ?? r.fuel_consumption ?? 0),
-        distance: Number(r.distance ?? 0),
-        totalEmissions: Number(r.totalEmissions ?? r.total_emissions ?? 0),
-        isBaseline: Boolean(r.is_baseline ?? r.isBaseline ?? false),
-      }));
+      const data = await listRoutes();
       setRoutes(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load routes");
@@ -59,21 +34,17 @@ export default function RoutesTab() {
     }
   };
 
-  const setBaseline = async (routeId: string) => {
+  const handleSetBaseline = async (routeId: string) => {
     try {
       setSettingBaseline(routeId);
-      const response = await fetch(`/routes/${routeId}/baseline`, {
-        method: "POST",
-      });
-      if (!response.ok) {
-        throw new Error(`Failed to set baseline: ${response.statusText}`);
-      }
-      // Update the route in state
-      setRoutes(
-        routes.map((route) =>
-          route.id === routeId ? { ...route, isBaseline: true } : route
-        )
-      );
+      const route = routes.find((r) => r.id === routeId);
+      if (!route) throw new Error("Route not found");
+
+      // Use current intensity as baseline
+      await setBaseline(routeId, route.intensityGco2PerMj);
+
+      // Refresh routes
+      await fetchRoutes();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to set baseline");
     } finally {
@@ -98,6 +69,9 @@ export default function RoutesTab() {
     const yearMatch = !yearFilter || route.year === parseInt(yearFilter);
     return vesselMatch && fuelMatch && yearMatch;
   });
+
+  const hasBaseline = (route: RouteMetrics) =>
+    route.baselineIntensity !== null && route.baselineIntensity > 0;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-100 to-slate-50 p-6">
@@ -124,7 +98,7 @@ export default function RoutesTab() {
               <p className="text-slate-500 mt-1">
                 Baselines:{" "}
                 <span className="font-bold text-green-600">
-                  {routes.filter((r) => r.isBaseline).length}
+                  {routes.filter((r) => hasBaseline(r)).length}
                 </span>
               </p>
             </div>
@@ -281,13 +255,13 @@ export default function RoutesTab() {
                         GHG Intensity
                       </th>
                       <th className="px-6 py-4 text-left text-sm font-bold text-white">
-                        Consumption (t)
+                        Emissions (gCO2)
                       </th>
                       <th className="px-6 py-4 text-left text-sm font-bold text-white">
-                        Distance (km)
+                        Distance (nm)
                       </th>
                       <th className="px-6 py-4 text-left text-sm font-bold text-white">
-                        Emissions (t)
+                        Energy (MJ)
                       </th>
                       <th className="px-6 py-4 text-left text-sm font-bold text-white">
                         Action
@@ -301,7 +275,7 @@ export default function RoutesTab() {
                       <tr
                         key={route.id}
                         className={`border-b border-slate-200 transition-all duration-200 ${
-                          route.isBaseline
+                          hasBaseline(route)
                             ? "bg-gradient-to-r from-green-50 to-emerald-50 border-l-4 border-l-green-600 hover:shadow-md"
                             : index % 2 === 0
                             ? "bg-white hover:bg-slate-50"
@@ -321,37 +295,37 @@ export default function RoutesTab() {
                         </td>
                         <td className="px-6 py-4 text-sm">
                           <span className="px-3 py-1 bg-sky-50 text-sky-700 rounded-full font-semibold">
-                            {route.ghgIntensity.toFixed(2)}
+                            {route.intensityGco2PerMj.toFixed(4)}
                           </span>
                         </td>
                         <td className="px-6 py-4 text-sm">
                           <span className="text-slate-700 font-medium">
-                            {route.fuelConsumption.toFixed(2)}
+                            {route.emissionsGco2eq.toLocaleString()}
                           </span>
                         </td>
                         <td className="px-6 py-4 text-sm">
                           <span className="text-slate-700 font-medium">
-                            {route.distance.toFixed(0)}
+                            {route.distanceNm.toFixed(0)}
                           </span>
                         </td>
                         <td className="px-6 py-4 text-sm">
                           <span
                             className={`px-3 py-1 rounded-full font-semibold ${
-                              route.totalEmissions > 100
+                              route.energyMj > 200000000
                                 ? "bg-red-50 text-red-700"
                                 : "bg-orange-50 text-orange-700"
                             }`}>
-                            {route.totalEmissions.toFixed(2)}
+                            {route.energyMj.toLocaleString()}
                           </span>
                         </td>
                         <td className="px-6 py-4 text-sm">
-                          {route.isBaseline ? (
+                          {hasBaseline(route) ? (
                             <span className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-green-600 text-white font-bold shadow-md">
                               <span>✓</span> Baseline
                             </span>
                           ) : (
                             <button
-                              onClick={() => setBaseline(route.id)}
+                              onClick={() => handleSetBaseline(route.id)}
                               disabled={settingBaseline === route.id}
                               className={`px-4 py-2 font-bold rounded-lg transition-all duration-200 text-white shadow-md hover:shadow-lg ${
                                 settingBaseline === route.id
@@ -390,7 +364,7 @@ export default function RoutesTab() {
                     <span className="text-slate-600">
                       Baseline:{" "}
                       <span className="font-bold">
-                        {filteredRoutes.filter((r) => r.isBaseline).length}
+                        {filteredRoutes.filter((r) => hasBaseline(r)).length}
                       </span>
                     </span>
                   </div>
