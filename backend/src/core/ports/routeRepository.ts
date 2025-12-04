@@ -43,7 +43,7 @@ export interface RouteRepository {
       energy_mj: number;
       emissions_gco2eq: number;
       intensity_gco2_per_mj: number;
-    }
+    },
   ): Promise<void>;
   setBaselineValue(routeId: string, baseline: number): Promise<void>;
 }

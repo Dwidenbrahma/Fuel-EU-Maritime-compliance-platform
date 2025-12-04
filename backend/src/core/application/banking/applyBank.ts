@@ -4,13 +4,9 @@ import { ComplianceRepository } from "../../ports/complianceRepository";
 
 export function makeApplyBank(
   bankingRepo: BankingRepository,
-  complianceRepo: ComplianceRepository
+  complianceRepo: ComplianceRepository,
 ) {
-  return async function applyBank(
-    shipId: string,
-    year: number,
-    amountToApply: number
-  ) {
+  return async function applyBank(shipId: string, year: number, amountToApply: number) {
     // Validate
     if (amountToApply <= 0) throw new Error("Amount must be positive");
 
@@ -24,11 +20,7 @@ export function makeApplyBank(
     const cb_before = cbRecord ? cbRecord.cb_gco2eq : 0;
 
     // Apply banked amount (mark entries as applied up to amount)
-    const applied = await bankingRepo.applyBankedAmount(
-      shipId,
-      year,
-      amountToApply
-    );
+    const applied = await bankingRepo.applyBankedAmount(shipId, year, amountToApply);
 
     // After applying, adjusted CB = cb_before + applied
     const cb_after = cb_before + applied;

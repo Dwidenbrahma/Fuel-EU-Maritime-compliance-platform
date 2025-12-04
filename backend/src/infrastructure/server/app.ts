@@ -32,14 +32,14 @@ export function createApp() {
 
   // Wire inbound HTTP adapters by injecting repository ports.
   // Controllers will create their own use-case instances from the ports.
-  app.use("/routes", makeRoutesRouter(routeRepo));
-  app.use("/compliance", makeComplianceRouter(complianceRepo));
-  app.use("/banking", makeBankingRouter(bankingRepo, complianceRepo));
-  app.use("/pools", makePoolingRouter(poolRepo, complianceRepo));
-  app.use("/compare", createCompareRouter());
+  app.use("/api/routes", makeRoutesRouter(routeRepo));
+  app.use("/api/compliance", makeComplianceRouter(complianceRepo));
+  app.use("/api/banking", makeBankingRouter(bankingRepo, complianceRepo));
+  app.use("/api/pools", makePoolingRouter(poolRepo, complianceRepo));
+  app.use("/api/compare", createCompareRouter());
 
   // Health check
-  app.get("/", (_req, res) => res.send("FuelEU Backend Running ✔"));
+  app.get("/api/", (_req, res) => res.send("FuelEU Backend Running ✔"));
 
   return app;
 }

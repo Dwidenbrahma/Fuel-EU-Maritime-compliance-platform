@@ -7,7 +7,7 @@ import { makeCreatePool } from "../../../core/application/pooling/createPool";
 
 export default function makePoolingRouter(
   poolingRepo: PoolingRepository,
-  complianceRepo: ComplianceRepository
+  complianceRepo: ComplianceRepository,
 ) {
   const router = Router();
 
@@ -30,7 +30,7 @@ export default function makePoolingRouter(
         poolId: result.poolId,
         year: result.year,
         pooledCB: result.pooledCB,
-        ships: result.ships.map((s) => ({
+        ships: result.ships.map(s => ({
           shipId: s.shipId,
           adjustedCB: s.adjustedCB,
         })),
@@ -51,9 +51,7 @@ export default function makePoolingRouter(
       const members = await poolingRepo.getPoolMembers(String(poolId));
       res.json({ poolId, members });
     } catch (err: any) {
-      res
-        .status(400)
-        .json({ error: err.message || "failed to fetch pool members" });
+      res.status(400).json({ error: err.message || "failed to fetch pool members" });
     }
   });
 
@@ -65,10 +63,7 @@ export default function makePoolingRouter(
         return res.status(400).json({ error: "shipId and year are required" });
       }
 
-      const pool = await poolingRepo.getPoolForShip(
-        String(shipId),
-        Number(year)
-      );
+      const pool = await poolingRepo.getPoolForShip(String(shipId), Number(year));
       res.json(pool);
     } catch (err: any) {
       res.status(400).json({ error: err.message || "failed to fetch pool" });

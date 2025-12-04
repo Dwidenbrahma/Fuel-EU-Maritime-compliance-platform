@@ -1,14 +1,9 @@
-import {
-  RouteRepository,
-  RouteFilter,
-  RouteRecord,
-} from "../../ports/routeRepository";
+import { RouteRepository, RouteFilter, RouteRecord } from "../../ports/routeRepository";
 import { makeComputeRouteMetrics } from "./computeRouteMetrics";
-
-// Default target intensity if no baseline is set (e.g., IMO 2030 target ~ 70% reduction)
-export const DEFAULT_BASELINE_INTENSITY = 50.0;
+import { DEFAULT_BASELINE_INTENSITY } from "../../domain/constants";
 
 export interface CompareRoute {
+  id: string;
   routeId: string;
   routeName: string;
   vesselType: string;
@@ -39,7 +34,7 @@ export function makeCompareRoutes(routeRepo: RouteRepository) {
   return async function compareRoutes(
     shipId: string,
     year: number,
-    filters?: RouteFilter
+    filters?: RouteFilter,
   ): Promise<CompareResponse> {
     const filterObj = { ...filters, shipId, year } as RouteFilter;
     const routes = await routeRepo.listRoutes(filterObj);
@@ -50,13 +45,11 @@ export function makeCompareRoutes(routeRepo: RouteRepository) {
     const baselineSeries: number[] = [];
 
     for (const r of routes) {
-      let record = { ...r } as RouteRecord;
+      const record = { ...r } as RouteRecord;
 
       // Ensure metrics are computed
       const needsCompute =
-        !record.energy_mj ||
-        !record.emissions_gco2eq ||
-        !record.intensity_gco2_per_mj;
+        !record.energy_mj || !record.emissions_gco2eq || !record.intensity_gco2_per_mj;
       if (needsCompute) {
         try {
           const metrics = await compute(record.id);
@@ -70,19 +63,18 @@ export function makeCompareRoutes(routeRepo: RouteRepository) {
       }
 
       const actualIntensity = record.intensity_gco2_per_mj || 0;
-      const baselineIntensity =
-        record.baseline_intensity ?? DEFAULT_BASELINE_INTENSITY;
+      const baselineIntensity = record.baseline_intensity ?? DEFAULT_BASELINE_INTENSITY;
 
       let percentChange: number | null = null;
       let status: "BETTER" | "WORSE" | "UNKNOWN" = "UNKNOWN";
 
       if (baselineIntensity > 0) {
-        percentChange =
-          ((actualIntensity - baselineIntensity) / baselineIntensity) * 100;
+        percentChange = ((actualIntensity - baselineIntensity) / baselineIntensity) * 100;
         status = actualIntensity <= baselineIntensity ? "BETTER" : "WORSE";
       }
 
       const compareRoute: CompareRoute = {
+        id: record.id,
         routeId: record.id,
         routeName: record.route_name || `Route-${record.id}`,
         vesselType: record.vessel_type || "Unknown",
@@ -92,8 +84,7 @@ export function makeCompareRoutes(routeRepo: RouteRepository) {
         energy_mj: record.energy_mj || 0,
         actualIntensity: Number(actualIntensity.toFixed(4)),
         baselineIntensity: Number(baselineIntensity.toFixed(4)),
-        percentChange:
-          percentChange !== null ? Number(percentChange.toFixed(2)) : null,
+        percentChange: percentChange !== null ? Number(percentChange.toFixed(2)) : null,
         status,
       };
 

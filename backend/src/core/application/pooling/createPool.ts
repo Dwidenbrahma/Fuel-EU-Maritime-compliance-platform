@@ -18,12 +18,9 @@ export interface CreatePoolResult {
 
 export function makeCreatePool(
   complianceRepo: ComplianceRepository,
-  poolingRepo: PoolingRepository
+  poolingRepo: PoolingRepository,
 ) {
-  return async function createPool(
-    shipIds: string[],
-    year: number
-  ): Promise<CreatePoolResult> {
+  return async function createPool(shipIds: string[], year: number): Promise<CreatePoolResult> {
     // 1. Validate inputs
     if (!shipIds || shipIds.length === 0) {
       throw new Error("shipIds array is required");
@@ -48,7 +45,7 @@ export function makeCreatePool(
 
       if (cb.adjustedCB <= 0) {
         throw new Error(
-          `Ship ${shipId} has adjustedCB <= 0 (value: ${cb.adjustedCB}). Only positive CB ships can join pools.`
+          `Ship ${shipId} has adjustedCB <= 0 (value: ${cb.adjustedCB}). Only positive CB ships can join pools.`,
         );
       }
 
@@ -62,9 +59,7 @@ export function makeCreatePool(
     for (const ship of ships) {
       const inPool = await poolingRepo.isShipInPool(ship.shipId, year);
       if (inPool) {
-        throw new Error(
-          `Ship ${ship.shipId} is already in a pool for year ${year}`
-        );
+        throw new Error(`Ship ${ship.shipId} is already in a pool for year ${year}`);
       }
     }
 
@@ -76,11 +71,7 @@ export function makeCreatePool(
 
     // 6. Add ships to pool
     for (const ship of ships) {
-      await poolingRepo.addShipToPool(
-        poolResult.id,
-        ship.shipId,
-        ship.adjustedCB
-      );
+      await poolingRepo.addShipToPool(poolResult.id, ship.shipId, ship.adjustedCB);
     }
 
     return {

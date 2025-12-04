@@ -1,14 +1,14 @@
 import { ComplianceRepository } from "../../ports/complianceRepository";
+import { TARGET_GHG_INTENSITY_2030 } from "../../domain/constants";
 
-const TARGET = 89.3368; // gCO2/MJ
-const MJ_PER_TON = 41000;
+const MJ_PER_TON = 41000; // Energy content conversion factor
 
 export function makeComputeCB(complianceRepo: ComplianceRepository) {
   return async function computeCBForShip(
     shipId: string,
     actualIntensity: number,
     fuelTons: number,
-    year: number
+    year: number,
   ) {
     // --- VALIDATION ---
     if (!shipId) throw new Error("shipId is required");
@@ -18,7 +18,7 @@ export function makeComputeCB(complianceRepo: ComplianceRepository) {
 
     // --- DOMAIN LOGIC ---
     const energyScope = fuelTons * MJ_PER_TON;
-    const delta = TARGET - actualIntensity;
+    const delta = TARGET_GHG_INTENSITY_2030 - actualIntensity;
 
     const cb = delta * energyScope; // gCO2e credit
 

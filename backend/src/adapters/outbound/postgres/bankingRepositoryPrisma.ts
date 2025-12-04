@@ -1,9 +1,6 @@
 // src/adapters/outbound/postgres/bankingRepositoryPrisma.ts
 
-import {
-  BankingRepository,
-  BankEntryRecord,
-} from "../../../core/ports/bankingRepository";
+import { BankingRepository, BankEntryRecord } from "../../../core/ports/bankingRepository";
 import { prisma } from "../../../infrastructure/prisma/prismaClient";
 
 export class BankingRepositoryPrisma implements BankingRepository {
@@ -30,7 +27,7 @@ export class BankingRepositoryPrisma implements BankingRepository {
   async listBankEntries(
     shipId: string,
     year: number,
-    onlyUnapplied = false
+    onlyUnapplied = false,
   ): Promise<BankEntryRecord[]> {
     const where: any = { ship_id: shipId, year };
     if (onlyUnapplied) where.applied = false;
@@ -40,7 +37,7 @@ export class BankingRepositoryPrisma implements BankingRepository {
       orderBy: { created_at: "asc" },
     });
 
-    return rows.map((r) => ({
+    return rows.map(r => ({
       id: r.id,
       ship_id: r.ship_id,
       year: r.year,
@@ -72,11 +69,7 @@ export class BankingRepositoryPrisma implements BankingRepository {
    * Mark bank entries as applied until reaching `amount`.
    * Returns the total applied.
    */
-  async applyBankedAmount(
-    shipId: string,
-    year: number,
-    amount: number
-  ): Promise<number> {
+  async applyBankedAmount(shipId: string, year: number, amount: number): Promise<number> {
     if (amount <= 0) return 0;
 
     // Get unapplied bank entries (FIFO)

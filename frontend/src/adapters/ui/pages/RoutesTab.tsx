@@ -40,13 +40,31 @@ export default function RoutesTab() {
       const route = routes.find((r) => r.id === routeId);
       if (!route) throw new Error("Route not found");
 
-      // Use current intensity as baseline
-      await setBaseline(routeId, route.intensityGco2PerMj);
+      // Toggle: if baseline exists, unset it (set to 0 or null)
+      // If no baseline, set it to current intensity
+      const isCurrentlyBaseline = hasBaseline(route);
 
-      // Refresh routes
+      if (isCurrentlyBaseline) {
+        console.log(`Unsetting baseline for ${routeId}`);
+        // Set to 0 or null to clear baseline (backend will unset it)
+        await setBaseline(routeId, 0);
+        console.log(`Baseline unset for ${routeId}`);
+      } else {
+        console.log(
+          `Setting baseline for ${routeId} to ${route.intensityGco2PerMj}`
+        );
+        await setBaseline(routeId, route.intensityGco2PerMj);
+        console.log(`Baseline set successfully for ${routeId}`);
+      }
+
+      // Refresh routes to reflect the update
+      setError(null);
       await fetchRoutes();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to set baseline");
+      const msg =
+        err instanceof Error ? err.message : "Failed to toggle baseline";
+      console.error(`Error toggling baseline for ${routeId}:`, err);
+      setError(msg);
     } finally {
       setSettingBaseline(null);
     }
@@ -319,24 +337,22 @@ export default function RoutesTab() {
                           </span>
                         </td>
                         <td className="px-6 py-4 text-sm">
-                          {hasBaseline(route) ? (
-                            <span className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-green-600 text-white font-bold shadow-md">
-                              <span>✓</span> Baseline
-                            </span>
-                          ) : (
-                            <button
-                              onClick={() => handleSetBaseline(route.id)}
-                              disabled={settingBaseline === route.id}
-                              className={`px-4 py-2 font-bold rounded-lg transition-all duration-200 text-white shadow-md hover:shadow-lg ${
-                                settingBaseline === route.id
-                                  ? "bg-slate-400 cursor-not-allowed"
-                                  : "bg-blue-800 hover:bg-blue-700 active:scale-95"
-                              }`}>
-                              {settingBaseline === route.id
-                                ? "⏳ Setting..."
-                                : "Set Baseline"}
-                            </button>
-                          )}
+                          <button
+                            onClick={() => handleSetBaseline(route.id)}
+                            disabled={settingBaseline === route.id}
+                            className={`px-4 py-2 font-bold rounded-lg transition-all duration-200 shadow-md hover:shadow-lg text-white ${
+                              settingBaseline === route.id
+                                ? "bg-slate-400 cursor-not-allowed"
+                                : hasBaseline(route)
+                                ? "bg-green-600 hover:bg-green-700 active:scale-95"
+                                : "bg-blue-800 hover:bg-blue-700 active:scale-95"
+                            }`}>
+                            {settingBaseline === route.id
+                              ? "⏳ Processing..."
+                              : hasBaseline(route)
+                              ? "✓ Baseline (click to unset)"
+                              : "+ Set Baseline"}
+                          </button>
                         </td>
                       </tr>
                     ))}

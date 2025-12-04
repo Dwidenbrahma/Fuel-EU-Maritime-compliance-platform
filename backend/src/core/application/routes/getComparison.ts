@@ -1,6 +1,5 @@
 import { RouteRepository } from "../../ports/routeRepository";
-
-const TARGET_2025 = 89.3368;
+import { TARGET_GHG_INTENSITY_2030 } from "../../domain/constants";
 
 export function makeGetComparison(routeRepo: RouteRepository) {
   return async function getComparison() {
@@ -17,29 +16,33 @@ export function makeGetComparison(routeRepo: RouteRepository) {
       const year = Number(yearStr);
       const list = grouped[year];
 
-      const baseline = list.find((r) => r.is_baseline);
+      // baseline is the route in the year with a non-null baseline_intensity
+      const baseline = list.find(
+        r => r.baseline_intensity !== null && r.baseline_intensity !== undefined,
+      );
 
       if (!baseline) {
         console.warn(`⚠ No baseline found for year ${year}. Skipping.`);
         continue;
       }
 
-      list.forEach((r) => {
-        if (r.route_id === baseline.route_id) return;
+      list.forEach(r => {
+        if (r.id === baseline.id) return;
 
-        const percentDiff = Number(
-          ((r.ghg_intensity / baseline.ghg_intensity - 1) * 100).toFixed(2)
-        );
+        const baseVal = Number(baseline.baseline_intensity ?? 0);
+        const curVal = Number(r.intensity_gco2_per_mj ?? 0);
 
-        const compliant = r.ghg_intensity <= TARGET_2025;
+        const percentDiff = baseVal > 0 ? Number(((curVal / baseVal - 1) * 100).toFixed(2)) : 0;
+
+        const compliant = curVal <= TARGET_GHG_INTENSITY_2030;
 
         finalResult.push({
           year,
-          routeId: r.route_id,
-          vesselType: r.vesselType,
-          fuelType: r.fuelType,
-          baselineGHG: baseline.ghg_intensity,
-          comparisonGHG: r.ghg_intensity,
+          routeId: r.id,
+          vesselType: r.vessel_type,
+          fuelType: r.fuel_type,
+          baselineGHG: baseVal,
+          comparisonGHG: curVal,
           percentDiff,
           compliant,
         });

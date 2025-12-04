@@ -7,7 +7,7 @@ import { makeApplyBank } from "../../../core/application/banking/applyBank";
 
 export default function makeBankingRouter(
   bankingRepo: BankingRepository,
-  complianceRepo: ComplianceRepository
+  complianceRepo: ComplianceRepository,
 ) {
   const router = Router();
 
@@ -18,8 +18,7 @@ export default function makeBankingRouter(
   router.get("/records", async (req, res) => {
     try {
       const { shipId, year } = req.query;
-      if (!shipId || !year)
-        return res.status(400).json({ error: "shipId & year required" });
+      if (!shipId || !year) return res.status(400).json({ error: "shipId & year required" });
 
       const sid = String(shipId);
       const y = Number(year);
@@ -49,8 +48,7 @@ export default function makeBankingRouter(
   router.post("/bank", async (req, res) => {
     try {
       const { shipId, year } = req.body;
-      if (!shipId || !year)
-        return res.status(400).json({ error: "shipId & year required" });
+      if (!shipId || !year) return res.status(400).json({ error: "shipId & year required" });
 
       const result = await bankSurplus(String(shipId), Number(year));
       res.json(result);
@@ -66,21 +64,13 @@ export default function makeBankingRouter(
     try {
       const { shipId, year, amount } = req.body;
       if (!shipId || !year || !amount)
-        return res
-          .status(400)
-          .json({ error: "shipId, year and amount required" });
+        return res.status(400).json({ error: "shipId, year and amount required" });
 
-      const result = await applyBank(
-        String(shipId),
-        Number(year),
-        Number(amount)
-      );
+      const result = await applyBank(String(shipId), Number(year), Number(amount));
       res.json(result);
     } catch (err: any) {
       console.error("POST /banking/apply error:", err);
-      res
-        .status(400)
-        .json({ error: err.message || "failed to apply banked amount" });
+      res.status(400).json({ error: err.message || "failed to apply banked amount" });
     }
   });
 

@@ -1,10 +1,7 @@
 // src/adapters/outbound/postgres/poolRepositoryPrisma.ts
 
 import { prisma } from "../../../infrastructure/prisma/prismaClient";
-import {
-  PoolMember,
-  PoolingRepository,
-} from "../../../core/ports/poolingRepository";
+import { PoolMember, PoolingRepository } from "../../../core/ports/poolingRepository";
 
 export class PoolingRepositoryPrisma implements PoolingRepository {
   async createPool(year: number, pooledCB: number): Promise<{ id: string }> {
@@ -14,11 +11,7 @@ export class PoolingRepositoryPrisma implements PoolingRepository {
     return { id: pool.id };
   }
 
-  async addShipToPool(
-    poolId: string,
-    shipId: string,
-    adjustedCB: number
-  ): Promise<void> {
+  async addShipToPool(poolId: string, shipId: string, adjustedCB: number): Promise<void> {
     await prisma.poolMember.create({
       data: {
         pool_id: poolId,
@@ -40,7 +33,7 @@ export class PoolingRepositoryPrisma implements PoolingRepository {
 
   async getPoolForShip(
     shipId: string,
-    year: number
+    year: number,
   ): Promise<{ poolId: string; pooledCB: number } | null> {
     const member = await prisma.poolMember.findFirst({
       where: {
@@ -56,13 +49,11 @@ export class PoolingRepositoryPrisma implements PoolingRepository {
     };
   }
 
-  async getPoolMembers(
-    poolId: string
-  ): Promise<Array<{ shipId: string; adjustedCB: number }>> {
+  async getPoolMembers(poolId: string): Promise<Array<{ shipId: string; adjustedCB: number }>> {
     const members = await prisma.poolMember.findMany({
       where: { pool_id: poolId },
     });
-    return members.map((m) => ({
+    return members.map(m => ({
       shipId: m.ship_id,
       adjustedCB: m.adjusted_cb,
     }));

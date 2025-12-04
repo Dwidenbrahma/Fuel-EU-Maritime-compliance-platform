@@ -14,17 +14,11 @@ export interface PoolRecord {
 
 export interface PoolingRepository {
   createPool(year: number, pooledCB: number): Promise<{ id: string }>;
-  addShipToPool(
-    poolId: string,
-    shipId: string,
-    adjustedCB: number
-  ): Promise<void>;
+  addShipToPool(poolId: string, shipId: string, adjustedCB: number): Promise<void>;
   isShipInPool(shipId: string, year: number): Promise<boolean>;
   getPoolForShip(
     shipId: string,
-    year: number
+    year: number,
   ): Promise<{ poolId: string; pooledCB: number } | null>;
-  getPoolMembers(
-    poolId: string
-  ): Promise<Array<{ shipId: string; adjustedCB: number }>>;
+  getPoolMembers(poolId: string): Promise<Array<{ shipId: string; adjustedCB: number }>>;
 }

@@ -4,13 +4,12 @@ import { ComplianceRepository } from "../../ports/complianceRepository";
 
 export function makeBankSurplus(
   bankingRepo: BankingRepository,
-  complianceRepo: ComplianceRepository
+  complianceRepo: ComplianceRepository,
 ) {
   return async function bankSurplus(shipId: string, year: number) {
     // Compute current CB (must exist)
     const cb = await complianceRepo.getComplianceBalance(shipId, year);
-    if (!cb)
-      throw new Error("No compliance balance found. Run compute CB first.");
+    if (!cb) throw new Error("No compliance balance found. Run compute CB first.");
 
     const cb_before = cb.cb_gco2eq;
 

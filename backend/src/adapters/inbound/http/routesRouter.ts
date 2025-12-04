@@ -15,29 +15,28 @@ export default function makeRoutesRouter(routeRepo: RouteRepository) {
       const filters: any = {};
       if (req.query.shipId) filters.shipId = String(req.query.shipId);
       if (req.query.year) filters.year = Number(req.query.year);
-      if (req.query.vesselType)
-        filters.vesselType = String(req.query.vesselType);
+      if (req.query.vesselType) filters.vesselType = String(req.query.vesselType);
       if (req.query.fuelType) filters.fuelType = String(req.query.fuelType);
-      if (req.query.minEmissions)
-        filters.minEmissions = Number(req.query.minEmissions);
-      if (req.query.minIntensity)
-        filters.minIntensity = Number(req.query.minIntensity);
+      if (req.query.minEmissions) filters.minEmissions = Number(req.query.minEmissions);
+      if (req.query.minIntensity) filters.minIntensity = Number(req.query.minIntensity);
       if (req.query.minFuel) filters.minFuel = Number(req.query.minFuel);
 
       const routes = await listRoutesWithMetrics(filters);
 
-      // Map to frontend shape
-      const out = routes.map((r) => ({
-        routeId: r.id,
+      // Map to frontend shape (use canonical field names: id, baseline_intensity)
+      const out = routes.map(r => ({
+        id: r.id,
+        shipId: r.ship_id || "",
         routeName: r.route_name || "",
         vesselType: r.vessel_type || "",
         fuelType: r.fuel_type || "",
         fuelTons: r.fuel_tons,
         distanceNm: r.distance_nm || 0,
-        emissions: r.emissions_gco2eq || 0,
-        energy: r.energy_mj || 0,
-        intensity: r.intensity_gco2_per_mj || 0,
-        baseline: r.baseline_intensity ?? null,
+        emissionsGco2eq: r.emissions_gco2eq || 0,
+        energyMj: r.energy_mj || 0,
+        intensityGco2PerMj: r.intensity_gco2_per_mj || 0,
+        baselineIntensity: r.baseline_intensity,
+        createdAt: new Date().toISOString(),
       }));
 
       res.json(out);
@@ -48,8 +47,7 @@ export default function makeRoutesRouter(routeRepo: RouteRepository) {
 
   router.get("/compare", async (req, res) => {
     try {
-      const { shipId, year, vesselType, fuelType, minEmissions, minIntensity } =
-        req.query;
+      const { shipId, year, vesselType, fuelType, minEmissions, minIntensity } = req.query;
 
       if (!shipId || !year) {
         return res.status(400).json({ error: "shipId and year are required" });
@@ -61,26 +59,30 @@ export default function makeRoutesRouter(routeRepo: RouteRepository) {
       if (minEmissions) filters.minEmissions = Number(minEmissions);
       if (minIntensity) filters.minIntensity = Number(minIntensity);
 
-      const comparison = await compareRoutes(
-        String(shipId),
-        Number(year),
-        filters
-      );
+      const comparison = await compareRoutes(String(shipId), Number(year), filters);
       res.json(comparison);
     } catch (err: any) {
-      res
-        .status(400)
-        .json({ error: err.message || "failed to compare routes" });
+      res.status(400).json({ error: err.message || "failed to compare routes" });
     }
   });
 
   router.post("/set-baseline", async (req, res) => {
     try {
-      const { routeId } = req.body || {};
+      const { routeId, intensity } = req.body || {};
       if (!routeId) return res.status(400).json({ error: "routeId required" });
+      if (intensity === undefined || intensity === null) {
+        return res.status(400).json({ error: "intensity required" });
+      }
 
-      const result = await setBaseline(routeId);
-      res.json({ routeId, baseline: result.baseline });
+      // Allow intensity = 0 to clear/unset baseline
+      if (intensity !== 0 && intensity <= 0) {
+        return res.status(400).json({ error: "intensity must be positive or 0 to clear" });
+      }
+
+      // If intensity is 0, set baseline to null; otherwise use the value
+      const baselineValue = intensity === 0 ? null : intensity;
+      await routeRepo.setBaselineValue(routeId, baselineValue);
+      res.json({ success: true, routeId, baseline: baselineValue });
     } catch (err: any) {
       res.status(400).json({ error: err.message || "failed to set baseline" });
     }

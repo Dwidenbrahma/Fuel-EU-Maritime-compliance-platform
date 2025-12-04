@@ -3,9 +3,7 @@ import { ComplianceRepository } from "../../../core/ports/complianceRepository";
 import { makeComputeCB } from "../../../core/application/compliance/computeCB";
 //import { makeGetAdjustedCB } from "../../../core/application/compliance/getAdjustedCB"; // implement similarly
 
-export default function makeComplianceRouter(
-  complianceRepo: ComplianceRepository
-) {
+export default function makeComplianceRouter(complianceRepo: ComplianceRepository) {
   const router = express.Router();
   const computeCB = makeComputeCB(complianceRepo);
   // implement other handlers as needed
@@ -24,7 +22,7 @@ export default function makeComplianceRouter(
     const year = Number(req.query.year || 2025);
     const rows = await complianceRepo.listAdjustedCB(year);
     // map repository shape (snake_case) to API contract expected by frontend
-    const mapped = rows.map((r) => ({
+    const mapped = rows.map(r => ({
       shipId: r.ship_id,
       adjustedCB: r.cb_before,
     }));

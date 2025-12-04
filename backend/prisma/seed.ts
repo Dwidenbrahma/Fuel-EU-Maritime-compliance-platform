@@ -12,74 +12,79 @@ async function main() {
   await prisma.route.deleteMany();
 
   // -------------------------
-  // 🌱 ROUTE DATA (dummy realistic)
+  // 🌱 ROUTE DATA (exact test data)
   // -------------------------
   await prisma.route.createMany({
     data: [
       {
+        id: "R001",
         ship_id: "SHIP001",
-        route_name: "Atlantic EU Run",
+        route_name: "Route 001",
         vessel_type: "Container",
         fuel_type: "HFO",
-        fuel_tons: 125.5,
+        fuel_tons: 5000,
         distance_nm: 12000,
         year: 2024,
         emissions_gco2eq: 4500,
-        energy_mj: 50000,
-        intensity_gco2_per_mj: 0.09,
-        baseline_intensity: 0.1,
+        energy_mj: 550000,
+        intensity_gco2_per_mj: 91.0,
+        baseline_intensity: null,
       },
       {
+        id: "R002",
         ship_id: "SHIP002",
-        route_name: "Asia-Pacific Lane",
+        route_name: "Route 002",
         vessel_type: "BulkCarrier",
         fuel_type: "LNG",
-        fuel_tons: 120,
+        fuel_tons: 4800,
         distance_nm: 11500,
         year: 2024,
         emissions_gco2eq: 4200,
-        energy_mj: 48000,
-        intensity_gco2_per_mj: 0.087,
-        baseline_intensity: 0.095,
+        energy_mj: 530000,
+        intensity_gco2_per_mj: 88.0,
+        baseline_intensity: null,
       },
       {
+        id: "R003",
         ship_id: "SHIP003",
-        route_name: "Gulf Oil Route",
+        route_name: "Route 003",
         vessel_type: "Tanker",
         fuel_type: "MGO",
-        fuel_tons: 127.5,
+        fuel_tons: 5100,
         distance_nm: 12500,
         year: 2024,
         emissions_gco2eq: 4700,
-        energy_mj: 52000,
-        intensity_gco2_per_mj: 0.091,
-        baseline_intensity: 0.1,
+        energy_mj: 560000,
+        intensity_gco2_per_mj: 93.5,
+        baseline_intensity: null,
       },
       {
+        id: "R004",
         ship_id: "SHIP004",
-        route_name: "Northern EU Run",
+        route_name: "Route 004",
         vessel_type: "RoRo",
         fuel_type: "HFO",
-        fuel_tons: 122.5,
+        fuel_tons: 4900,
         distance_nm: 11800,
         year: 2025,
         emissions_gco2eq: 4300,
-        energy_mj: 49500,
-        intensity_gco2_per_mj: 0.086,
-        baseline_intensity: 0.095,
+        energy_mj: 540000,
+        intensity_gco2_per_mj: 89.2,
+        baseline_intensity: null,
       },
       {
+        id: "R005",
         ship_id: "SHIP005",
-        route_name: "Middle East Trade Route",
+        route_name: "Route 005",
         vessel_type: "Container",
         fuel_type: "LNG",
-        fuel_tons: 123.75,
+        fuel_tons: 4950,
         distance_nm: 11900,
         year: 2025,
         emissions_gco2eq: 4400,
-        energy_mj: 51000,
-        intensity_gco2_per_mj: 0.088,
-        baseline_intensity: 0.094,
+        energy_mj: 545000,
+        intensity_gco2_per_mj: 90.5,
+        baseline_intensity: null,
       },
     ],
   });
@@ -102,39 +107,51 @@ async function main() {
   console.log("🌱 Compliance added.");
 
   // -------------------------
-  -(
-    // 🌱 BANK ENTRIES
-    // -------------------------
-    (await prisma.bankEntry.createMany({
-      data: [
-        { ship_id: "SHIP001", year: 2024, amount_gco2eq: 50, applied: false },
-        { ship_id: "SHIP001", year: 2024, amount_gco2eq: 25, applied: false },
+  // 🌱 BANK ENTRIES
+  // -------------------------
+  await prisma.bankEntry.createMany({
+    data: [
+      { ship_id: "SHIP001", year: 2024, amount_gco2eq: 50, applied: false },
+      { ship_id: "SHIP001", year: 2024, amount_gco2eq: 25, applied: false },
 
-        { ship_id: "SHIP002", year: 2024, amount_gco2eq: 40, applied: false },
-        { ship_id: "SHIP003", year: 2024, amount_gco2eq: 60, applied: false },
+      { ship_id: "SHIP002", year: 2024, amount_gco2eq: 40, applied: false },
+      { ship_id: "SHIP003", year: 2024, amount_gco2eq: 60, applied: false },
 
-        { ship_id: "SHIP004", year: 2025, amount_gco2eq: 55, applied: false },
-        { ship_id: "SHIP005", year: 2025, amount_gco2eq: 35, applied: false },
-      ],
-    }))
-  );
+      { ship_id: "SHIP004", year: 2025, amount_gco2eq: 55, applied: false },
+      { ship_id: "SHIP005", year: 2025, amount_gco2eq: 35, applied: false },
+    ],
+  });
 
   console.log("🌱 Banking entries added.");
 
   // -------------------------
   // 🌱 POOL DATA
   // -------------------------
-  const pool2024 = await prisma.pool.create({
+  const pool2024_A = await prisma.pool.create({
     data: {
       year: 2024,
-      pooled_cb: 150, // dummy combined CB
+      pooled_cb: 150,
     },
   });
 
-  const pool2025 = await prisma.pool.create({
+  const pool2024_B = await prisma.pool.create({
+    data: {
+      year: 2024,
+      pooled_cb: 120,
+    },
+  });
+
+  const pool2025_A = await prisma.pool.create({
     data: {
       year: 2025,
       pooled_cb: 160,
+    },
+  });
+
+  const pool2025_B = await prisma.pool.create({
+    data: {
+      year: 2025,
+      pooled_cb: 140,
     },
   });
 
@@ -143,28 +160,47 @@ async function main() {
   // -------------------------
   await prisma.poolMember.createMany({
     data: [
-      // 2024 Pool
+      // 2024 Pool A (SHIP001 + SHIP002)
       {
-        pool_id: pool2024.id,
+        pool_id: pool2024_A.id,
         ship_id: "SHIP001",
         adjusted_cb: 80,
       },
       {
-        pool_id: pool2024.id,
+        pool_id: pool2024_A.id,
         ship_id: "SHIP002",
         adjusted_cb: 70,
       },
 
-      // 2025 Pool
+      // 2024 Pool B (SHIP003)
       {
-        pool_id: pool2025.id,
+        pool_id: pool2024_B.id,
+        ship_id: "SHIP003",
+        adjusted_cb: 120,
+      },
+
+      // 2025 Pool A (SHIP004 + SHIP005)
+      {
+        pool_id: pool2025_A.id,
         ship_id: "SHIP004",
         adjusted_cb: 85,
       },
       {
-        pool_id: pool2025.id,
+        pool_id: pool2025_A.id,
         ship_id: "SHIP005",
         adjusted_cb: 75,
+      },
+
+      // 2025 Pool B (SHIP001 + SHIP002 in new pool)
+      {
+        pool_id: pool2025_B.id,
+        ship_id: "SHIP001",
+        adjusted_cb: 75,
+      },
+      {
+        pool_id: pool2025_B.id,
+        ship_id: "SHIP003",
+        adjusted_cb: 65,
       },
     ],
   });
@@ -173,5 +209,5 @@ async function main() {
 }
 
 main()
-  .catch((e) => console.error("❌ Seed Error: ", e))
+  .catch(e => console.error("❌ Seed Error: ", e))
   .finally(async () => await prisma.$disconnect());

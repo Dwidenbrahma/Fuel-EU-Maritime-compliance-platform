@@ -8,7 +8,7 @@ export class HttpComplianceAdapter implements CompliancePort {
     shipId: string,
     year: number
   ): Promise<ComplianceBalance> {
-    const res = await fetch(`/compliance/cb?shipId=${shipId}&year=${year}`);
+    const res = await fetch(`/api/compliance/cb?shipId=${shipId}&year=${year}`);
     if (!res.ok) throw new Error("Failed to fetch compliance balance");
     const data = await res.json();
 
@@ -24,7 +24,7 @@ export class HttpComplianceAdapter implements CompliancePort {
 
   async getAdjustedCB(shipId: string, year: number): Promise<number> {
     const res = await fetch(
-      `/compliance/adjusted-cb?shipId=${shipId}&year=${year}`
+      `/api/compliance/adjusted-cb?shipId=${shipId}&year=${year}`
     );
     if (!res.ok) throw new Error("Failed to fetch adjusted CB");
     const data = await res.json();

@@ -3,7 +3,7 @@ import { PoolingRepository } from "../../ports/poolingRepository";
 
 export function makeGetAdjustedCB(
   complianceRepo: ComplianceRepository,
-  poolingRepo?: PoolingRepository
+  poolingRepo?: PoolingRepository,
 ) {
   return async function getAdjustedCB(shipId: string, year: number) {
     if (!shipId) throw new Error("shipId required");
@@ -46,15 +46,9 @@ export function makeGetAdjustedCB(
 
     const originalCB = cbRecord.cb_gco2eq;
 
-    const appliedEntries = await complianceRepo.getAppliedBankEntries(
-      shipId,
-      year
-    );
+    const appliedEntries = await complianceRepo.getAppliedBankEntries(shipId, year);
 
-    const bankedApplied = appliedEntries.reduce(
-      (sum, entry) => sum + entry.amount_gco2eq,
-      0
-    );
+    const bankedApplied = appliedEntries.reduce((sum, entry) => sum + entry.amount_gco2eq, 0);
 
     adjustedCB = originalCB + bankedApplied;
 

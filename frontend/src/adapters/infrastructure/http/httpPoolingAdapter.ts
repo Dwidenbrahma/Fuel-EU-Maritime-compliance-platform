@@ -11,7 +11,7 @@ export class HttpPoolingAdapter implements PoolingPort {
     shipIds: string[],
     year: number
   ): Promise<CreatePoolResponse> {
-    const res = await fetch("/pooling/create", {
+    const res = await fetch("/api/pooling/create", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ shipIds, year }),
@@ -34,7 +34,7 @@ export class HttpPoolingAdapter implements PoolingPort {
   }
 
   async getPoolMembers(poolId: string): Promise<PoolMember[]> {
-    const res = await fetch(`/pooling/members?poolId=${poolId}`);
+    const res = await fetch(`/api/pooling/members?poolId=${poolId}`);
     if (!res.ok) throw new Error("Failed to fetch pool members");
 
     const data = await res.json();
@@ -46,7 +46,7 @@ export class HttpPoolingAdapter implements PoolingPort {
   }
 
   async getPoolForShip(shipId: string, year: number): Promise<Pool | null> {
-    const res = await fetch(`/pooling/ship?shipId=${shipId}&year=${year}`);
+    const res = await fetch(`/api/pooling/ship?shipId=${shipId}&year=${year}`);
     if (!res.ok) {
       if (res.status === 404) return null;
       throw new Error("Failed to fetch pool for ship");

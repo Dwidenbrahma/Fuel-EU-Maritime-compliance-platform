@@ -1,8 +1,4 @@
-import {
-  RouteRepository,
-  RouteFilter,
-  RouteRecord,
-} from "../../ports/routeRepository";
+import { RouteRepository, RouteFilter, RouteRecord } from "../../ports/routeRepository";
 import { makeComputeRouteMetrics } from "./computeRouteMetrics";
 
 export function makeListRoutesWithMetrics(routeRepo: RouteRepository) {
@@ -14,12 +10,10 @@ export function makeListRoutesWithMetrics(routeRepo: RouteRepository) {
     const results: RouteRecord[] = [];
 
     for (const r of routes) {
-      let record = { ...r } as RouteRecord;
+      const record = { ...r } as RouteRecord;
 
       const needsCompute =
-        !record.energy_mj ||
-        !record.emissions_gco2eq ||
-        !record.intensity_gco2_per_mj;
+        !record.energy_mj || !record.emissions_gco2eq || !record.intensity_gco2_per_mj;
       if (needsCompute) {
         try {
           const metrics = await compute(record.id);

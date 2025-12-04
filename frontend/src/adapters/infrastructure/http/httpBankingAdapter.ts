@@ -11,7 +11,9 @@ export class HttpBankingAdapter implements BankingPort {
     shipId: string,
     year: number
   ): Promise<BankingRecordsResponse> {
-    const res = await fetch(`/banking/records?shipId=${shipId}&year=${year}`);
+    const res = await fetch(
+      `/api/banking/records?shipId=${shipId}&year=${year}`
+    );
     if (!res.ok) throw new Error("Failed to fetch banking records");
     const data = await res.json();
 
@@ -39,7 +41,7 @@ export class HttpBankingAdapter implements BankingPort {
     year: number,
     amount: number
   ): Promise<void> {
-    const res = await fetch("/banking/bank", {
+    const res = await fetch("/api/banking/bank", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ shipId, year, amount }),
@@ -48,7 +50,7 @@ export class HttpBankingAdapter implements BankingPort {
   }
 
   async applyBank(shipId: string, year: number, amount: number): Promise<void> {
-    const res = await fetch("/banking/apply", {
+    const res = await fetch("/api/banking/apply", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ shipId, year, amount }),

@@ -16,7 +16,7 @@ export interface BankingRepository {
   listBankEntries(
     shipId: string,
     year: number,
-    onlyUnapplied?: boolean
+    onlyUnapplied?: boolean,
   ): Promise<BankEntryRecord[]>;
 
   // sum of unapplied bank entries (available banked amount)
@@ -26,9 +26,5 @@ export interface BankingRepository {
   getAppliedAmount(shipId: string, year: number): Promise<number>;
 
   // mark bank entries applied up to `amount` and return total applied
-  applyBankedAmount(
-    shipId: string,
-    year: number,
-    amount: number
-  ): Promise<number>;
+  applyBankedAmount(shipId: string, year: number, amount: number): Promise<number>;
 }

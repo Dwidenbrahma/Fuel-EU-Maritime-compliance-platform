@@ -82,14 +82,12 @@ export class RouteRepositoryPrisma implements RouteRepository {
     if (filters?.year) where.year = filters.year;
     if (filters?.vesselType) where.vessel_type = filters.vesselType;
     if (filters?.fuelType) where.fuel_type = filters.fuelType;
-    if (filters?.minEmissions)
-      where.emissions_gco2eq = { gte: filters.minEmissions };
-    if (filters?.minIntensity)
-      where.intensity_gco2_per_mj = { gte: filters.minIntensity };
+    if (filters?.minEmissions) where.emissions_gco2eq = { gte: filters.minEmissions };
+    if (filters?.minIntensity) where.intensity_gco2_per_mj = { gte: filters.minIntensity };
     if (filters?.minFuel) where.fuel_tons = { gte: filters.minFuel };
 
     const rows = await prisma.route.findMany({ where });
-    return rows.map((r) => ({
+    return rows.map(r => ({
       id: r.id,
       ship_id: r.ship_id,
       route_name: r.route_name,
@@ -130,7 +128,7 @@ export class RouteRepositoryPrisma implements RouteRepository {
       energy_mj: number;
       emissions_gco2eq: number;
       intensity_gco2_per_mj: number;
-    }
+    },
   ): Promise<void> {
     await prisma.route.update({
       where: { id: routeId },
@@ -142,7 +140,7 @@ export class RouteRepositoryPrisma implements RouteRepository {
     });
   }
 
-  async setBaselineValue(routeId: string, baseline: number): Promise<void> {
+  async setBaselineValue(routeId: string, baseline: number | null): Promise<void> {
     await prisma.route.update({
       where: { id: routeId },
       data: { baseline_intensity: baseline },
